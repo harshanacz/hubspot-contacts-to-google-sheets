@@ -16,14 +16,27 @@ bal run
 ## Flow
 
 ```text
-HubSpot contacts
+Load last sync timestamp
 	↓
-normalize email
+Fetch HubSpot contacts (incremental or full)
 	↓
-check sheet
+Filter by updatedAt > lastSyncTimestamp
 	↓
-update row OR append row
+Normalize email
+	↓
+Check sheet
+	↓
+Update row OR append row
+	↓
+Save latest timestamp
 ```
+
+## Features
+
+- **Incremental Sync**: Only processes contacts modified since last run
+- **UPSERT Logic**: Updates existing contacts, inserts new ones (by email)
+- **Automatic Scheduling**: Runs at configurable intervals
+- **Persistent State**: Tracks last sync timestamp across restarts
 
 ## Notes
 

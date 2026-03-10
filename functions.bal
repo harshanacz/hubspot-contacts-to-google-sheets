@@ -62,11 +62,19 @@ function convertFieldToHeader(string fieldName) returns string {
     }
 }
 
-// Fetch HubSpot contacts
-function fetchHubSpotContacts() returns Contact[]|error {
+// Fetch HubSpot contacts with optional incremental sync
+function fetchHubSpotContacts(string lastSyncTime) returns Contact[]|error {
 
     Contact[] allContacts = [];
     string? afterCursor = ();
+    
+    boolean isIncrementalSync = lastSyncTime != "";
+    
+    if isIncrementalSync {
+        io:println(string `Incremental sync started from ${lastSyncTime}`);
+    } else {
+        io:println("Full sync started");
+    }
 
     while true {
 
@@ -89,8 +97,15 @@ function fetchHubSpotContacts() returns Contact[]|error {
                 updatedAt: hubspotContact.updatedAt,
                 archived: hubspotContact.archived ?: false
             };
-
-            allContacts.push(contact);
+            
+            // Filter contacts based on last sync timestamp
+            if isIncrementalSync {
+                if isNewerThan(contact.updatedAt, lastSyncTime) {
+                    allContacts.push(contact);
+                }
+            } else {
+                allContacts.push(contact);
+            }
         }
 
         string? nextAfter = response.paging?.next?.after;
@@ -222,8 +237,8 @@ function getColumnLetter(int columnNumber) returns string {
     return columnLetter;
 }
 
-// Export contacts with UPSERT
-function exportContactsToSheet(Contact[] contacts) returns error? {
+// Export contacts with UPSERT and return latest timestamp
+function exportContactsToSheet(Contact[] contacts) returns string|error {
 
     io:println("Exporting contacts to sheet...");
 
@@ -235,6 +250,8 @@ function exportContactsToSheet(Contact[] contacts) returns error? {
     int insertCount = 0;
     int updateCount = 0;
     int errorCount = 0;
+    
+    string latestTimestamp = "";
 
     foreach Contact contact in contacts {
 
@@ -291,9 +308,16 @@ function exportContactsToSheet(Contact[] contacts) returns error? {
                 insertCount += 1;
             }
         }
+        
+        // Track the latest updatedAt timestamp
+        if latestTimestamp == "" || isNewerThan(contact.updatedAt, latestTimestamp) {
+            latestTimestamp = contact.updatedAt;
+        }
     }
 
     io:println(
         string `Export finished → inserted ${insertCount}, updated ${updateCount}, failed ${errorCount}`
     );
+    
+    return latestTimestamp;
 }
