@@ -252,8 +252,20 @@ function exportContactsToSheet(Contact[] contacts) returns string|error {
     int errorCount = 0;
     
     string latestTimestamp = "";
+    
+    boolean limitReached = false;
 
     foreach Contact contact in contacts {
+        
+        // Check if max row limit has been reached
+        if maxRows > 0 {
+            int processedCount = insertCount + updateCount;
+            if processedCount >= maxRows {
+                io:println("Max row limit reached. Stopping export.");
+                limitReached = true;
+                break;
+            }
+        }
 
         ContactProperties props = contact.properties;
 
@@ -315,8 +327,9 @@ function exportContactsToSheet(Contact[] contacts) returns string|error {
         }
     }
 
+    string limitInfo = limitReached ? " (limit reached)" : "";
     io:println(
-        string `Export finished → inserted ${insertCount}, updated ${updateCount}, failed ${errorCount}`
+        string `Export finished → inserted ${insertCount}, updated ${updateCount}, failed ${errorCount}${limitInfo}`
     );
     
     return latestTimestamp;

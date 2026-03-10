@@ -61,6 +61,7 @@ Wait for next scheduled run
 - **UPSERT Logic**: Updates existing contacts, inserts new ones (by email)
 - **Automatic Scheduling**: Runs at configurable intervals
 - **Persistent State**: Tracks last sync timestamp across restarts
+- **Row Limit Control**: Configurable maximum rows to process per run (0 = unlimited)
 
 ## Notes
 

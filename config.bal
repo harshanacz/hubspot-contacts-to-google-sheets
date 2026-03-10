@@ -19,3 +19,6 @@ configurable int scheduleIntervalSeconds = 5;
 
 // Incremental Sync Configuration
 configurable string lastSyncTimestamp = "";
+
+// Row Limit Configuration
+configurable int maxRows = 1;
