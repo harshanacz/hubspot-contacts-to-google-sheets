@@ -15,10 +15,10 @@ function ensureHeaderRow(string targetSheet) returns error? {
     sheets:Range rangeData = rangeResult;
 
     if rangeData.values.length() == 0 {
-        io:println(string `Sheet '${targetSheet}' is empty. Inserting headers...`);
+        io:println(string `---- Sheet '${targetSheet}' is empty. Inserting headers ----`);
         check insertHeaderRow(targetSheet);
     } else {
-        io:println(string `Header row already exists in '${targetSheet}'.`);
+        io:println(string `---- Header exists in '${targetSheet}' ----`);
     }
 }
 
@@ -39,7 +39,7 @@ function ensureSheetExists(string targetSheet) returns error? {
         return addedSheet;
     }
 
-    io:println(string `Created missing sheet '${targetSheet}'.`);
+    io:println(string `---- Created missing sheet '${targetSheet}' ----`);
 }
 
 // Insert header row
@@ -55,7 +55,7 @@ function insertHeaderRow(string targetSheet) returns error? {
 
     check sheetsClient->appendRowToSheet(spreadsheetId, targetSheet, headers);
 
-    io:println(string `Header row inserted in '${targetSheet}'`);
+    io:println(string `---- Header inserted in '${targetSheet}' ----`);
 }
 
 // Convert field name to header
@@ -93,13 +93,13 @@ function fetchHubSpotContacts(string lastSyncTime) returns Contact[]|error {
     boolean hasContactFilter = contactFilterProperty.trim() != "" && contactFilterValue.trim() != "";
     
     if isIncrementalSync {
-        io:println(string `Incremental sync started from ${lastSyncTime} (maxRows = ${maxRows})`);
+        io:println(string `---- Incremental sync from ${lastSyncTime} (maxRows = ${maxRows}) ----`);
     } else {
-        io:println("Full sync started (maxRows ignored)");
+        io:println("---- Full sync mode (maxRows ignored) ----");
     }
 
     if hasContactFilter {
-        io:println(string `Contact filter active: ${contactFilterProperty} = ${contactFilterValue}`);
+        io:println(string `---- Contact filter: ${contactFilterProperty} = ${contactFilterValue} ----`);
     }
 
     while true {
@@ -152,7 +152,7 @@ function fetchHubSpotContacts(string lastSyncTime) returns Contact[]|error {
         }
     }
 
-    io:println(string `Fetched ${allContacts.length()} contacts`);
+    io:println(string `---- Contacts selected for export: ${allContacts.length()} ----`);
 
     return allContacts;
 }
@@ -246,7 +246,7 @@ function buildEmailRowMap(string targetSheet) returns map<int>|error {
         sheetsClient->getRange(spreadsheetId, targetSheet, "A:A");
 
     if result is error {
-        io:println("No existing sheet data");
+        io:println(string `---- No existing rows in '${targetSheet}' ----`);
         return emailRowMap;
     }
 
@@ -269,7 +269,7 @@ function buildEmailRowMap(string targetSheet) returns map<int>|error {
         rowIndex += 1;
     }
 
-    io:println(string `Existing contacts in sheet: ${emailRowMap.length()}`);
+    io:println(string `---- Existing contacts in '${targetSheet}': ${emailRowMap.length()} ----`);
 
     return emailRowMap;
 }
@@ -336,7 +336,7 @@ function getColumnLetter(int columnNumber) returns string {
 // Export contacts with UPSERT and return latest processed timestamp
 function exportContactsToSheet(Contact[] contacts, string lastSyncTimestamp, boolean isFullSync) returns string|error {
 
-    io:println("Exporting contacts to sheet...");
+    io:println("---- Preparing sheet export ----");
     map<map<int>> emailRowMapBySheet = {};
 
     int insertCount = 0;
@@ -378,7 +378,7 @@ function exportContactsToSheet(Contact[] contacts, string lastSyncTimestamp, boo
             .toLowerAscii();
 
         if email == "" {
-            io:println(string `Skipping ${contact.id}: no email`);
+            io:println(string `---- Skipping ${contact.id}: missing email ----`);
             errorCount += 1;
             continue;
         }
@@ -406,7 +406,7 @@ function exportContactsToSheet(Contact[] contacts, string lastSyncTimestamp, boo
                 updateSheetRow(targetSheet, existingRow, rowData);
 
             if result is error {
-                io:println(string `Update failed ${contact.id}`);
+                io:println(string `---- Update failed for contact ${contact.id} in '${targetSheet}' ----`);
                 errorCount += 1;
             } else {
                 updateCount += 1;
@@ -423,7 +423,7 @@ function exportContactsToSheet(Contact[] contacts, string lastSyncTimestamp, boo
                 );
 
             if result is error {
-                io:println(string `Insert failed ${contact.id}`);
+                io:println(string `---- Insert failed for contact ${contact.id} in '${targetSheet}' ----`);
                 errorCount += 1;
             } else {
                 insertCount += 1;
@@ -443,7 +443,7 @@ function exportContactsToSheet(Contact[] contacts, string lastSyncTimestamp, boo
 
     string limitInfo = limitReached ? " (limit reached)" : "";
     io:println(
-        string `Export finished → inserted ${insertCount}, updated ${updateCount}, failed ${errorCount}${limitInfo}`
+        string `---- Export summary: inserted ${insertCount}, updated ${updateCount}, failed ${errorCount}${limitInfo} ----`
     );
     
     return latestTimestamp;
