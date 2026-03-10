@@ -143,18 +143,98 @@ function fetchContactsPage(string? afterCursor) returns hubspotcontacts:Collecti
     return hubspotClient->/.get(properties = fields, 'limit = 100);
 }
 
-// Export contacts to Google Sheet
+// Build email to row index map from existing sheet data
+function buildEmailRowMap() returns map<int>|error {
+    map<int> emailRowMap = {};
+    
+    // Read all existing data from the sheet
+    sheets:Range|error rangeResult = sheetsClient->getRange(spreadsheetId, sheetName, "A:Z");
+    
+    if rangeResult is error {
+        // If error, assume sheet is empty or doesn't exist
+        io:println("No existing data found in sheet");
+        return emailRowMap;
+    }
+    
+    sheets:Range rangeData = rangeResult;
+    
+    // Skip header row (index 0) and build map from data rows
+    int rowIndex = 1;
+    foreach (int|string|decimal)[] row in rangeData.values {
+        if rowIndex > 1 && row.length() > 0 {
+            // Email is in column A (index 0)
+            string emailValue = row[0].toString();
+            if emailValue.trim() != "" {
+                emailRowMap[emailValue] = rowIndex;
+            }
+        }
+        rowIndex += 1;
+    }
+    
+    io:println(string `Found ${emailRowMap.length()} existing contacts in sheet`);
+    return emailRowMap;
+}
+
+// Update an existing row in the sheet
+function updateSheetRow(int rowNumber, (string|int|decimal)[] rowData) returns error? {
+    // Calculate the column range based on number of fields
+    string endColumn = getColumnLetter(rowData.length());
+    string rangeNotation = string `A${rowNumber}:${endColumn}${rowNumber}`;
+    
+    // Create Range record with the data
+    sheets:Range updateRange = {
+        a1Notation: rangeNotation,
+        values: [rowData]
+    };
+    
+    // Update the row
+    check sheetsClient->setRange(spreadsheetId, sheetName, updateRange);
+}
+
+// Convert column number to letter (1=A, 2=B, etc.)
+function getColumnLetter(int columnNumber) returns string {
+    string columnLetter = "";
+    int number = columnNumber;
+    string[] alphabet = [
+        "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M",
+        "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"
+    ];
+    
+    while number > 0 {
+        int remainder = (number - 1) % 26;
+        columnLetter = string `${alphabet[remainder]}${columnLetter}`;
+        number = (number - 1) / 26;
+    }
+    
+    return columnLetter;
+}
+
+// Export contacts to Google Sheet with UPSERT logic
 function exportContactsToSheet(Contact[] contacts) returns error? {
     io:println("Exporting contacts to Google Sheet...");
     
     // Ensure header row exists before exporting data
     check ensureHeaderRow();
     
-    int successCount = 0;
+    // Build email to row index map from existing data
+    map<int> emailRowMap = check buildEmailRowMap();
+    
+    int insertCount = 0;
+    int updateCount = 0;
     int errorCount = 0;
     
     foreach Contact contact in contacts {
         ContactProperties props = contact.properties;
+        
+        // Get email for this contact
+        string emailValue = getContactPropertyValue(props, "email");
+        
+        // Skip contacts without email
+        if emailValue.trim() == "" {
+            io:println(string `Skipping contact ${contact.id}: no email address`);
+            errorCount += 1;
+            continue;
+        }
         
         // Dynamically build row data based on configured fields
         (string|int|decimal)[] rowData = [];
@@ -165,16 +245,31 @@ function exportContactsToSheet(Contact[] contacts) returns error? {
             rowData.push(fieldValue);
         }
         
-        // Append row to Google Sheet
-        error? result = sheetsClient->appendRowToSheet(spreadsheetId, sheetName, rowData);
+        // Check if email already exists in sheet
+        int? existingRowNumber = emailRowMap[emailValue];
         
-        if result is error {
-            io:println(string `Error exporting contact ${contact.id}: ${result.message()}`);
-            errorCount += 1;
+        if existingRowNumber is int {
+            // Update existing row
+            error? result = updateSheetRow(existingRowNumber, rowData);
+            
+            if result is error {
+                io:println(string `Error updating contact ${contact.id}: ${result.message()}`);
+                errorCount += 1;
+            } else {
+                updateCount += 1;
+            }
         } else {
-            successCount += 1;
+            // Append new row
+            error? result = sheetsClient->appendRowToSheet(spreadsheetId, sheetName, rowData);
+            
+            if result is error {
+                io:println(string `Error inserting contact ${contact.id}: ${result.message()}`);
+                errorCount += 1;
+            } else {
+                insertCount += 1;
+            }
         }
     }
     
-    io:println(string `Export completed: ${successCount} successful, ${errorCount} failed`);
+    io:println(string `Export completed: ${insertCount} inserted, ${updateCount} updated, ${errorCount} failed`);
 }
