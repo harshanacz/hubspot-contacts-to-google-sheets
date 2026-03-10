@@ -4,13 +4,12 @@ import ballerinax/googleapis.sheets;
 
 // Check if the sheet is empty and insert headers if needed
 function ensureHeaderRow(string targetSheet) returns error? {
+    check ensureSheetExists(targetSheet);
 
     sheets:Range|error rangeResult = sheetsClient->getRange(spreadsheetId, targetSheet, "A1:Z1");
 
     if rangeResult is error {
-        io:println(string `Sheet '${targetSheet}' appears empty. Inserting header row...`);
-        check insertHeaderRow(targetSheet);
-        return;
+        return rangeResult;
     }
 
     sheets:Range rangeData = rangeResult;
@@ -21,6 +20,26 @@ function ensureHeaderRow(string targetSheet) returns error? {
     } else {
         io:println(string `Header row already exists in '${targetSheet}'.`);
     }
+}
+
+// Ensure worksheet exists. If missing, create it automatically.
+function ensureSheetExists(string targetSheet) returns error? {
+    sheets:Sheet|error existingSheet = sheetsClient->getSheetByName(spreadsheetId, targetSheet);
+    if existingSheet is sheets:Sheet {
+        return;
+    }
+
+    sheets:Sheet|error addedSheet = sheetsClient->addSheet(spreadsheetId, targetSheet);
+    if addedSheet is error {
+        // Handle concurrent creation or transient lookup failures by re-checking.
+        sheets:Sheet|error sheetAfterRetry = sheetsClient->getSheetByName(spreadsheetId, targetSheet);
+        if sheetAfterRetry is sheets:Sheet {
+            return;
+        }
+        return addedSheet;
+    }
+
+    io:println(string `Created missing sheet '${targetSheet}'.`);
 }
 
 // Insert header row
