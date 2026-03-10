@@ -11,6 +11,11 @@ configurable string googleRefreshUrl = "https://oauth2.googleapis.com/token";
 configurable string spreadsheetId = ?;
 configurable string sheetName = ?;
 
+// Lifecycle-based Sheet Routing Configuration
+configurable string leadSheetName = "Leads";
+configurable string customerSheetName = "Customers";
+configurable string defaultSheetName = "";
+
 // Field Mapping Configuration
 configurable string[] fields = ["email", "firstname", "lastname", "phone"];
 

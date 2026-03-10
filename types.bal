@@ -4,6 +4,7 @@ type ContactProperties record {
     string firstname?;
     string lastname?;
     string phone?;
+    string lifecyclestage?;
 };
 
 // HubSpot Contact

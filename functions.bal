@@ -3,28 +3,28 @@ import ballerinax/hubspot.crm.obj.contacts as hubspotcontacts;
 import ballerinax/googleapis.sheets;
 
 // Check if the sheet is empty and insert headers if needed
-function ensureHeaderRow() returns error? {
+function ensureHeaderRow(string targetSheet) returns error? {
 
-    sheets:Range|error rangeResult = sheetsClient->getRange(spreadsheetId, sheetName, "A1:Z1");
+    sheets:Range|error rangeResult = sheetsClient->getRange(spreadsheetId, targetSheet, "A1:Z1");
 
     if rangeResult is error {
-        io:println("Sheet appears empty. Inserting header row...");
-        check insertHeaderRow();
+        io:println(string `Sheet '${targetSheet}' appears empty. Inserting header row...`);
+        check insertHeaderRow(targetSheet);
         return;
     }
 
     sheets:Range rangeData = rangeResult;
 
     if rangeData.values.length() == 0 {
-        io:println("Sheet empty. Inserting headers...");
-        check insertHeaderRow();
+        io:println(string `Sheet '${targetSheet}' is empty. Inserting headers...`);
+        check insertHeaderRow(targetSheet);
     } else {
-        io:println("Header row already exists.");
+        io:println(string `Header row already exists in '${targetSheet}'.`);
     }
 }
 
 // Insert header row
-function insertHeaderRow() returns error? {
+function insertHeaderRow(string targetSheet) returns error? {
 
     (string|int|decimal)[] headers = [];
 
@@ -34,9 +34,9 @@ function insertHeaderRow() returns error? {
 
     headers.push("Last Synced");
 
-    check sheetsClient->appendRowToSheet(spreadsheetId, sheetName, headers);
+    check sheetsClient->appendRowToSheet(spreadsheetId, targetSheet, headers);
 
-    io:println("Header row inserted");
+    io:println(string `Header row inserted in '${targetSheet}'`);
 }
 
 // Convert field name to header
@@ -98,7 +98,8 @@ function fetchHubSpotContacts(string lastSyncTime) returns Contact[]|error {
                     email: getPropertyValue(props,"email"),
                     firstname: getPropertyValue(props,"firstname"),
                     lastname: getPropertyValue(props,"lastname"),
-                    phone: getPropertyValue(props,"phone")
+                    phone: getPropertyValue(props,"phone"),
+                    lifecyclestage: getPropertyValue(props,"lifecyclestage")
                 },
                 createdAt: hubspotContact.createdAt,
                 updatedAt: hubspotContact.updatedAt,
@@ -158,6 +159,9 @@ function getContactPropertyValue(ContactProperties properties, string key) retur
         "phone" => {
             return properties.phone ?: "";
         }
+        "lifecyclestage" => {
+            return properties.lifecyclestage ?: "";
+        }
         _ => {
             return "";
         }
@@ -199,16 +203,28 @@ function getHubSpotRequestProperties() returns string[] {
         }
     }
 
+    boolean hasLifecycleStage = false;
+    foreach string fieldName in requestProperties {
+        if fieldName == "lifecyclestage" {
+            hasLifecycleStage = true;
+            break;
+        }
+    }
+
+    if !hasLifecycleStage {
+        requestProperties.push("lifecyclestage");
+    }
+
     return requestProperties;
 }
 
 // Build email → row map
-function buildEmailRowMap() returns map<int>|error {
+function buildEmailRowMap(string targetSheet) returns map<int>|error {
 
     map<int> emailRowMap = {};
 
     sheets:Range|error result =
-        sheetsClient->getRange(spreadsheetId, sheetName, "A:A");
+        sheetsClient->getRange(spreadsheetId, targetSheet, "A:A");
 
     if result is error {
         io:println("No existing sheet data");
@@ -240,7 +256,7 @@ function buildEmailRowMap() returns map<int>|error {
 }
 
 // Update row
-function updateSheetRow(int rowNumber,(string|int|decimal)[] rowData) returns error? {
+function updateSheetRow(string targetSheet, int rowNumber, (string|int|decimal)[] rowData) returns error? {
 
     string endColumn = getColumnLetter(rowData.length());
 
@@ -252,7 +268,26 @@ function updateSheetRow(int rowNumber,(string|int|decimal)[] rowData) returns er
         values: [rowData]
     };
 
-    check sheetsClient->setRange(spreadsheetId,sheetName,updateRange);
+    check sheetsClient->setRange(spreadsheetId, targetSheet, updateRange);
+}
+
+function getTargetSheetName(Contact contact) returns string {
+    string lifecycleStage = getContactPropertyValue(contact.properties, "lifecyclestage").trim().toLowerAscii();
+
+    if lifecycleStage == "lead" {
+        return leadSheetName;
+    }
+
+    if lifecycleStage == "customer" {
+        return customerSheetName;
+    }
+
+    string configuredDefaultSheet = defaultSheetName.trim();
+    if configuredDefaultSheet != "" {
+        return configuredDefaultSheet;
+    }
+
+    return sheetName;
 }
 
 // Column index → letter
@@ -283,11 +318,7 @@ function getColumnLetter(int columnNumber) returns string {
 function exportContactsToSheet(Contact[] contacts, string lastSyncTimestamp, boolean isFullSync) returns string|error {
 
     io:println("Exporting contacts to sheet...");
-
-    check ensureHeaderRow();
-
-    map<int> emailRowMap =
-        check buildEmailRowMap();
+    map<map<int>> emailRowMapBySheet = {};
 
     int insertCount = 0;
     int updateCount = 0;
@@ -310,6 +341,17 @@ function exportContactsToSheet(Contact[] contacts, string lastSyncTimestamp, boo
         }
 
         ContactProperties props = contact.properties;
+        string targetSheet = getTargetSheetName(contact);
+
+        map<int>? existingSheetMap = emailRowMapBySheet[targetSheet];
+        map<int> emailRowMap;
+        if existingSheetMap is map<int> {
+            emailRowMap = existingSheetMap;
+        } else {
+            check ensureHeaderRow(targetSheet);
+            emailRowMap = check buildEmailRowMap(targetSheet);
+            emailRowMapBySheet[targetSheet] = emailRowMap;
+        }
 
         string email =
             getContactPropertyValue(props,"email")
@@ -342,7 +384,7 @@ function exportContactsToSheet(Contact[] contacts, string lastSyncTimestamp, boo
         if existingRow is int {
 
             error? result =
-                updateSheetRow(existingRow,rowData);
+                updateSheetRow(targetSheet, existingRow, rowData);
 
             if result is error {
                 io:println(string `Update failed ${contact.id}`);
@@ -357,7 +399,7 @@ function exportContactsToSheet(Contact[] contacts, string lastSyncTimestamp, boo
             error? result =
                 sheetsClient->appendRowToSheet(
                     spreadsheetId,
-                    sheetName,
+                    targetSheet,
                     rowData
                 );
 
