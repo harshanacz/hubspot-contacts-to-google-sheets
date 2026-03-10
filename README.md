@@ -13,6 +13,19 @@ This repository contains a Ballerina project that retrieves contacts from HubSpo
 bal run
 ```
 
+## Flow
+
+```text
+HubSpot contacts
+	↓
+normalize email
+	↓
+check sheet
+	↓
+update row OR append row
+```
+
 ## Notes
 
 - Sensitive configuration files are ignored via `.gitignore`.
+
