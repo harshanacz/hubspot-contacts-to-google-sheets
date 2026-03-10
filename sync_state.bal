@@ -17,7 +17,7 @@ function getLastSyncTimestamp() returns string {
         if fileContent is string {
             string timestamp = fileContent.trim();
             if timestamp != "" {
-                io:println(string `---- Loaded checkpoint from file: ${timestamp} ----`);
+                io:println(string `---- Loaded checkpoint from file: ${timestamp}`);
                 return timestamp;
             }
         }
@@ -25,11 +25,11 @@ function getLastSyncTimestamp() returns string {
     
     // Fall back to configurable value
     if currentSyncTimestamp != "" {
-        io:println(string `---- Using configured checkpoint: ${currentSyncTimestamp} ----`);
+        io:println(string `---- Using configured checkpoint: ${currentSyncTimestamp}`);
         return currentSyncTimestamp;
     }
     
-    io:println("---- No checkpoint found. Starting full sync ----");
+    io:println("---- No checkpoint found. Starting full sync");
     return "";
 }
 
@@ -37,7 +37,7 @@ function getLastSyncTimestamp() returns string {
 function saveLastSyncTimestamp(string timestamp) returns error? {
     check io:fileWriteString(SYNC_STATE_FILE, timestamp);
     currentSyncTimestamp = timestamp;
-    io:println(string `---- Saved checkpoint: ${timestamp} ----`);
+    io:println(string `---- Saved checkpoint: ${timestamp}`);
 }
 
 // Get current timestamp in ISO 8601 format

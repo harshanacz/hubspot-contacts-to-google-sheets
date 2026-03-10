@@ -6,9 +6,29 @@ This repository contains a Ballerina project that retrieves contacts from HubSpo
 
 1. Install [Ballerina](https://ballerina.io/).
 2. Configure `Config.toml` with HubSpot and Google API credentials.
+3. Start from `Config.toml.example`, then copy values into `Config.toml`.
 
 ## Configuration
 Update `Config.toml` with the hardcoded values for HubSpot API key, Google Sheets ID, and other necessary parameters.
+
+### How to fill `Config.toml`
+
+Use `Config.toml.example` as a template.
+
+1. Set HubSpot key:
+`hubspotAccessToken`
+2. Set Google OAuth values:
+`googleClientId`, `googleClientSecret`, `googleRefreshToken`
+3. Set target spreadsheet:
+`spreadsheetId`
+4. Set sheet routing:
+`sheetName`, `leadSheetName`, `customerSheetName`, `defaultSheetName`
+5. Optional filter:
+`contactFilterProperty`, `contactFilterValue`
+6. Runtime tuning:
+`scheduleIntervalSeconds`, `maxRows`
+
+If any value is wrong, the terminal now prints a clear `---- Hint ----` message.
 
 ## Architecture
 
