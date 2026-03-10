@@ -17,3 +17,6 @@ Ballerina.toml
 Dependencies.toml
 
 last_sync_timestamp.txt
+
+target/
+Dependencies.toml
