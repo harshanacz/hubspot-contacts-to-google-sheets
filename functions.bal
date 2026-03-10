@@ -32,6 +32,8 @@ function insertHeaderRow() returns error? {
         headers.push(convertFieldToHeader(fieldName));
     }
 
+    headers.push("Last Synced");
+
     check sheetsClient->appendRowToSheet(spreadsheetId, sheetName, headers);
 
     io:println("Header row inserted");
@@ -69,11 +71,16 @@ function fetchHubSpotContacts(string lastSyncTime) returns Contact[]|error {
     string? afterCursor = ();
     
     boolean isIncrementalSync = lastSyncTime != "";
+    boolean hasContactFilter = contactFilterProperty.trim() != "" && contactFilterValue.trim() != "";
     
     if isIncrementalSync {
         io:println(string `Incremental sync started from ${lastSyncTime} (maxRows = ${maxRows})`);
     } else {
         io:println("Full sync started (maxRows ignored)");
+    }
+
+    if hasContactFilter {
+        io:println(string `Contact filter active: ${contactFilterProperty} = ${contactFilterValue}`);
     }
 
     while true {
@@ -97,6 +104,14 @@ function fetchHubSpotContacts(string lastSyncTime) returns Contact[]|error {
                 updatedAt: hubspotContact.updatedAt,
                 archived: hubspotContact.archived ?: false
             };
+
+            // Apply optional contact property filter.
+            if hasContactFilter {
+                string filterPropertyValue = getPropertyValue(props, contactFilterProperty).trim().toLowerAscii();
+                if filterPropertyValue != contactFilterValue.trim().toLowerAscii() {
+                    continue;
+                }
+            }
             
             // Filter contacts based on last sync timestamp
             if isIncrementalSync {
@@ -153,11 +168,38 @@ function getContactPropertyValue(ContactProperties properties, string key) retur
 function fetchContactsPage(string? afterCursor)
 returns hubspotcontacts:CollectionResponseSimplePublicObjectWithAssociationsForwardPaging|error {
 
+    string[] requestProperties = getHubSpotRequestProperties();
+
     if afterCursor is string {
-        return hubspotClient->/.get(after = afterCursor, properties = fields, 'limit = 100);
+        return hubspotClient->/.get(after = afterCursor, properties = requestProperties, 'limit = 100);
     }
 
-    return hubspotClient->/.get(properties = fields, 'limit = 100);
+    return hubspotClient->/.get(properties = requestProperties, 'limit = 100);
+}
+
+function getHubSpotRequestProperties() returns string[] {
+    string[] requestProperties = [];
+
+    foreach string fieldName in fields {
+        requestProperties.push(fieldName);
+    }
+
+    string filterProperty = contactFilterProperty.trim();
+    if filterProperty != "" {
+        boolean alreadyIncluded = false;
+        foreach string fieldName in requestProperties {
+            if fieldName == filterProperty {
+                alreadyIncluded = true;
+                break;
+            }
+        }
+
+        if !alreadyIncluded {
+            requestProperties.push(filterProperty);
+        }
+    }
+
+    return requestProperties;
 }
 
 // Build email → row map
@@ -289,6 +331,10 @@ function exportContactsToSheet(Contact[] contacts, string lastSyncTimestamp, boo
 
             rowData.push(value);
         }
+
+        // Add per-row sync write timestamp as the final column.
+        string lastSyncedAt = getCurrentTimestamp();
+        rowData.push(lastSyncedAt);
 
         int? existingRow = emailRowMap[email];
         boolean upsertSucceeded = false;

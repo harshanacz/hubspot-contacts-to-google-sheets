@@ -20,5 +20,9 @@ configurable int scheduleIntervalSeconds = 5;
 // Incremental Sync Configuration
 configurable string lastSyncTimestamp = "";
 
+// Optional Contact Filter Configuration
+configurable string contactFilterProperty = "";
+configurable string contactFilterValue = "";
+
 // Row Limit Configuration
 configurable int maxRows = 1;
