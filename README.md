@@ -7,6 +7,22 @@ This repository contains a Ballerina project that retrieves contacts from HubSpo
 1. Install [Ballerina](https://ballerina.io/).
 2. Configure `Config.toml` with HubSpot and Google API credentials.
 
+## Configuration
+Update `Config.toml` with the hardcoded values for HubSpot API key, Google Sheets ID, and other necessary parameters.
+
+## Architecture
+
+HubSpot API
+     ↓
+Ballerina Integration Service
+     ↓
+Google Sheets API
+
+## Example Output
+Email | First Name | Last Name | Phone
+---------------------------------------
+test@email.com | John | Doe | 123456
+
 ## Usage
 
 ```bash
