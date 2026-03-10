@@ -71,9 +71,9 @@ function fetchHubSpotContacts(string lastSyncTime) returns Contact[]|error {
     boolean isIncrementalSync = lastSyncTime != "";
     
     if isIncrementalSync {
-        io:println(string `Incremental sync started from ${lastSyncTime}`);
+        io:println(string `Incremental sync started from ${lastSyncTime} (maxRows = ${maxRows})`);
     } else {
-        io:println("Full sync started");
+        io:println("Full sync started (maxRows ignored)");
     }
 
     while true {
@@ -237,8 +237,8 @@ function getColumnLetter(int columnNumber) returns string {
     return columnLetter;
 }
 
-// Export contacts with UPSERT and return latest timestamp
-function exportContactsToSheet(Contact[] contacts) returns string|error {
+// Export contacts with UPSERT and return latest processed timestamp
+function exportContactsToSheet(Contact[] contacts, string lastSyncTimestamp, boolean isFullSync) returns string|error {
 
     io:println("Exporting contacts to sheet...");
 
@@ -251,15 +251,15 @@ function exportContactsToSheet(Contact[] contacts) returns string|error {
     int updateCount = 0;
     int errorCount = 0;
     
-    string latestTimestamp = "";
+    string latestTimestamp = lastSyncTimestamp;
+    int processedCount = 0;
     
     boolean limitReached = false;
 
     foreach Contact contact in contacts {
         
-        // Check if max row limit has been reached
-        if maxRows > 0 {
-            int processedCount = insertCount + updateCount;
+        // Apply max row limit only during incremental sync runs.
+        if !isFullSync && maxRows > 0 {
             if processedCount >= maxRows {
                 io:println("Max row limit reached. Stopping export.");
                 limitReached = true;
@@ -291,6 +291,7 @@ function exportContactsToSheet(Contact[] contacts) returns string|error {
         }
 
         int? existingRow = emailRowMap[email];
+        boolean upsertSucceeded = false;
 
         if existingRow is int {
 
@@ -302,6 +303,7 @@ function exportContactsToSheet(Contact[] contacts) returns string|error {
                 errorCount += 1;
             } else {
                 updateCount += 1;
+                upsertSucceeded = true;
             }
 
         } else {
@@ -318,11 +320,16 @@ function exportContactsToSheet(Contact[] contacts) returns string|error {
                 errorCount += 1;
             } else {
                 insertCount += 1;
+                upsertSucceeded = true;
             }
         }
         
-        // Track the latest updatedAt timestamp
-        if latestTimestamp == "" || isNewerThan(contact.updatedAt, latestTimestamp) {
+        if upsertSucceeded {
+            processedCount += 1;
+        }
+
+        // Track the newest processed updatedAt timestamp.
+        if upsertSucceeded && (latestTimestamp == "" || isNewerThan(contact.updatedAt, latestTimestamp)) {
             latestTimestamp = contact.updatedAt;
         }
     }

@@ -10,24 +10,26 @@ public function main() returns error? {
         
         // Get the last sync timestamp
         string lastSyncTime = getLastSyncTimestamp();
+        boolean isFullSync = lastSyncTime == "";
         
         // Step 1: Fetch contacts from HubSpot (with incremental sync)
         Contact[] contacts = check fetchHubSpotContacts(lastSyncTime);
+        string latestTimestamp = lastSyncTime;
         
         if contacts.length() == 0 {
             io:println("No new or updated contacts found");
+
+            if isFullSync {
+                latestTimestamp = getCurrentTimestamp();
+            }
         } else {
             // Step 2: Export contacts to Google Sheet and get latest timestamp
-            string latestTimestamp = check exportContactsToSheet(contacts);
-            
-            // Step 3: Save the latest timestamp for next run
-            if latestTimestamp != "" {
-                check saveLastSyncTimestamp(latestTimestamp);
-            } else if lastSyncTime == "" {
-                // If this was a full sync with no contacts, save current time
-                string currentTime = getCurrentTimestamp();
-                check saveLastSyncTimestamp(currentTime);
-            }
+            latestTimestamp = check exportContactsToSheet(contacts, lastSyncTime, isFullSync);
+        }
+
+        // Step 3: Save the latest timestamp for next run after processing finishes.
+        if latestTimestamp != lastSyncTime {
+            check saveLastSyncTimestamp(latestTimestamp);
         }
         
         io:println("Export completed");
