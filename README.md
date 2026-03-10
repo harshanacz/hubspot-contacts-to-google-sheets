@@ -16,19 +16,27 @@ bal run
 ## Flow
 
 ```text
+Start
+  ↓
 Load last sync timestamp
-	↓
-Fetch HubSpot contacts (incremental or full)
-	↓
-Filter by updatedAt > lastSyncTimestamp
-	↓
+  ↓
+Determine sync type
+  ↓
+Full sync (first run) OR Incremental sync
+  ↓
+Fetch HubSpot contacts
+  ↓
 Normalize email
-	↓
-Check sheet
-	↓
+  ↓
+Check existing rows in Google Sheet
+  ↓
 Update row OR append row
-	↓
-Save latest timestamp
+  ↓
+Track latest updatedAt timestamp
+  ↓
+Save last sync timestamp
+  ↓
+Wait for next scheduled run
 ```
 
 ## Features
