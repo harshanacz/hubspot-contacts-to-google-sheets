@@ -15,4 +15,4 @@ configurable string sheetName = ?;
 configurable string[] fields = ["email", "firstname", "lastname", "phone"];
 
 // Scheduling Configuration
-configurable int scheduleIntervalSeconds = 3600;
+configurable int scheduleIntervalSeconds = 5;
