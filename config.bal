@@ -20,7 +20,7 @@ configurable string defaultSheetName = "";
 configurable string[] fields = ["email", "firstname", "lastname", "phone"];
 
 // Scheduling Configuration
-configurable int scheduleIntervalSeconds = 5;
+configurable int scheduleIntervalSeconds = 15;
 
 // Incremental Sync Configuration
 configurable string lastSyncTimestamp = "";
@@ -30,4 +30,4 @@ configurable string contactFilterProperty = "";
 configurable string contactFilterValue = "";
 
 // Row Limit Configuration
-configurable int maxRows = 1;
+configurable int maxRows = 2;
