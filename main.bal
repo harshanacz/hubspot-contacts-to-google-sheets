@@ -55,6 +55,7 @@ public function main() returns error? {
         }
 
         io:println(string `---- Waiting ${scheduleIntervalSeconds}s for next run`);
+        io:println("");
         
         // Sleep for configured interval
         runtime:sleep(<decimal>scheduleIntervalSeconds);
