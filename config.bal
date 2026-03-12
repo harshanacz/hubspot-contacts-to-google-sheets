@@ -12,9 +12,17 @@ configurable string spreadsheetId = ?;
 configurable string sheetName = ?;
 
 // Lifecycle-based Sheet Routing Configuration
+// Each lifecycle stage maps to a sheet name.
+// Set multiple stages to the same name to merge them into one sheet.
+configurable string subscriberSheetName = "Subscribers";
 configurable string leadSheetName = "Leads";
+configurable string marketingqualifiedleadSheetName = "MQLs";
+configurable string salesqualifiedleadSheetName = "SQLs";
+configurable string opportunitySheetName = "Opportunities";
 configurable string customerSheetName = "Customers";
-configurable string defaultSheetName = "";
+configurable string evangelistSheetName = "Evangelists";
+configurable string otherSheetName = "Others";
+configurable string defaultSheetName = "Sheet1";
 
 // Field Mapping Configuration
 configurable string[] fields = ["email", "firstname", "lastname", "phone"];

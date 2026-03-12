@@ -300,20 +300,18 @@ function updateSheetRow(string targetSheet, int rowNumber, (string|int|decimal)[
 function getTargetSheetName(Contact contact) returns string {
     string lifecycleStage = getContactPropertyValue(contact.properties, "lifecyclestage").trim().toLowerAscii();
 
-    if lifecycleStage == "lead" {
-        return leadSheetName;
+    match lifecycleStage {
+        "subscriber" => { return subscriberSheetName; }
+        "lead" => { return leadSheetName; }
+        "marketingqualifiedlead" => { return marketingqualifiedleadSheetName; }
+        "salesqualifiedlead" => { return salesqualifiedleadSheetName; }
+        "opportunity" => { return opportunitySheetName; }
+        "customer" => { return customerSheetName; }
+        "evangelist" => { return evangelistSheetName; }
+        "other" => { return otherSheetName; }
     }
 
-    if lifecycleStage == "customer" {
-        return customerSheetName;
-    }
-
-    string configuredDefaultSheet = defaultSheetName.trim();
-    if configuredDefaultSheet != "" {
-        return configuredDefaultSheet;
-    }
-
-    return sheetName;
+    return defaultSheetName.trim() != "" ? defaultSheetName : sheetName;
 }
 
 // Column index → letter
