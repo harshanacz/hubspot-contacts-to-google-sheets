@@ -114,6 +114,6 @@
       "additionalProperties": false
     }
   },
-  "requiredLevel": 3,
-  "additionalProperties": false
+  "additionalProperties": false,
+    "requiredLevel": 3
 }
