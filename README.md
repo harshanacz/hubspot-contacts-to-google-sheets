@@ -1,89 +1,101 @@
-# HubSpot Contacts to Google Sheets
+# HubSpot Contacts to Google Sheets Integration
 
-This repository contains a Ballerina project that retrieves contacts from HubSpot and exports them to Google Sheets.
+## Description
 
-## Setup
+This integration fetches contacts from HubSpot and synchronizes them to a Google Sheets spreadsheet. The integration runs on a scheduled interval and supports incremental synchronization to ensure that only new or modified contacts are processed.
 
-1. Install [Ballerina](https://ballerina.io/).
-2. Configure `Config.toml` with HubSpot and Google API credentials.
-3. Start from `Config.toml.example`, then copy values into `Config.toml`.
+Contacts are routed to different sheets based on their lifecycle stage, and existing records are updated using email as the unique identifier.
+
+### What It Does
+
+- Fetches contacts from HubSpot using the HubSpot CRM Contacts API
+- Synchronizes contacts to Google Sheets
+- Routes contacts to sheets based on lifecycle stage (Leads, Customers, or a default sheet)
+- Uses email as a unique key to **UPSERT** rows
+- Supports incremental synchronization using a last sync timestamp
+- Supports configurable contact filtering by any HubSpot property
+- Allows configurable field mapping between HubSpot and spreadsheet columns
+- Limits the number of processed rows per execution if configured
+- Runs automatically on a scheduled interval
+
+## Prerequisites
+
+Before running this integration, you need:
+
+> For detailed step-by-step instructions with images, see [`.choreo/instructions.md`](.choreo/instructions.md).
+
+### HubSpot Setup
+
+1. A HubSpot account with CRM access
+2. A Private App with the following scope:
+   - `crm.objects.contacts.read`
+3. Access Token generated from the private app
+
+This integration uses a HubSpot Private App token for authentication. [Learn how to create a HubSpot Private App](https://developers.hubspot.com/docs/api/private-apps).
+
+### Google Sheets Setup
+
+1. A Google Cloud project with Google Sheets API enabled
+2. OAuth2 credentials:
+   - Client ID
+   - Client Secret
+   - Refresh Token
+3. Scopes Required:
+   - `https://www.googleapis.com/auth/spreadsheets`
+
+This integration uses refresh token flow for auth. [Learn how to Develop on Google Workspace](https://developers.google.com/workspace/guides/get-started).
 
 ## Configuration
-Update `Config.toml` with the hardcoded values for HubSpot API key, Google Sheets ID, and other necessary parameters.
 
-### How to fill `Config.toml`
+The following configurations are required to connect to HubSpot and Google Sheets.
 
-Use `Config.toml.example` as a template.
+### HubSpot Credentials
 
-1. Set HubSpot key:
-`hubspotAccessToken`
-2. Set Google OAuth values:
-`googleClientId`, `googleClientSecret`, `googleRefreshToken`
-3. Set target spreadsheet:
-`spreadsheetId`
-4. Set sheet routing:
-`sheetName`, `leadSheetName`, `customerSheetName`, `defaultSheetName`
-5. Optional filter:
-`contactFilterProperty`, `contactFilterValue`
-6. Runtime tuning:
-`scheduleIntervalSeconds`, `maxRows`
+- `hubspotAccessToken` - Your HubSpot Private App access token
 
-If any value is wrong, the terminal now prints a clear `---- Hint ----` message.
+### Google Credentials
 
-## Architecture
+- `googleRefreshToken` - Your Google OAuth2 refresh token
+- `googleClientId` - Your Google OAuth2 client ID
+- `googleClientSecret` - Your Google OAuth2 client secret
 
-HubSpot API
-     ↓
-Ballerina Integration Service
-     ↓
-Google Sheets API
+### Spreadsheet Settings
 
-## Example Output
-Email | First Name | Last Name | Phone
----------------------------------------
-test@email.com | John | Doe | 123456
+- `spreadsheetId` - The ID of your target Google Spreadsheet
 
-## Usage
+Each HubSpot lifecycle stage routes to its own sheet by default:
 
-```bash
-bal run
-```
+| Configurable | Lifecycle Stage | Default Sheet Name |
+|---|---|---|
+| `subscriberSheetName` | Subscriber | `Subscribers` |
+| `leadSheetName` | Lead | `Leads` |
+| `marketingqualifiedleadSheetName` | Marketing Qualified Lead | `MQLs` |
+| `salesqualifiedleadSheetName` | Sales Qualified Lead | `SQLs` |
+| `opportunitySheetName` | Opportunity | `Opportunities` |
+| `customerSheetName` | Customer | `Customers` |
+| `evangelistSheetName` | Evangelist | `Evangelists` |
+| `otherSheetName` | Other | `Others` |
+| `defaultSheetName` | Any unrecognised stage | `Sheet1` |
 
-## Flow
+> **Tip:** Set multiple stage sheet names to the **same value** to merge them into one sheet. For example, to put leads and MQLs together set both `leadSheetName` and `marketingqualifiedleadSheetName` to `Leads`. To send **all contacts into a single sheet**, set every sheet name to the same value.
 
-```text
-Start
-  ↓
-Load last sync timestamp
-  ↓
-Determine sync type
-  ↓
-Full sync (first run) OR Incremental sync
-  ↓
-Fetch HubSpot contacts
-  ↓
-Normalize email
-  ↓
-Check existing rows in Google Sheet
-  ↓
-Update row OR append row
-  ↓
-Track latest updatedAt timestamp
-  ↓
-Save last sync timestamp
-  ↓
-Wait for next scheduled run
-```
+### Sync Settings
 
-## Features
+- `fields` - List of HubSpot contact properties to export (e.g., `["email", "firstname", "lastname", "phone"]`)
+- `scheduleIntervalSeconds` - How frequently the sync runs, in seconds
+- `maxRows` - Maximum number of contacts to process per run (`0` for unlimited)
+- `lastSyncTimestamp` - Timestamp of the last sync; leave empty for a full initial sync
+- `contactFilterProperty` - Optional HubSpot property name to filter contacts by
+- `contactFilterValue` - Optional value to match for the filter property
 
-- **Incremental Sync**: Only processes contacts modified since last run
-- **UPSERT Logic**: Updates existing contacts, inserts new ones (by email)
-- **Automatic Scheduling**: Runs at configurable intervals
-- **Persistent State**: Tracks last sync timestamp across restarts
-- **Row Limit Control**: Configurable maximum rows to process per run (0 = unlimited, only applies to incremental sync)
+## Deploying on **Devant**
 
-## Notes
-
-- Sensitive configuration files are ignored via `.gitignore`.
-
+1. Sign in to your Devant account.
+2. Create a new Integration and follow instructions in [Devant Documentation](https://wso2.com/devant/docs/references/import-a-repository/) to import this repository.
+3. Select the **Technology** as `WSO2 Integrator: BI`.
+4. Choose the **Integration** Type as `Automation` and click **Create**.
+5. Once the build is successful, click **Configure to Continue** and set up the required environment variables for HubSpot and Google Sheets credentials.
+6. Click **Schedule** to schedule the automation.
+7. In the **BY INTERVAL** tab, select the desired interval unit from the dropdown.
+8. Set the desired frequency for the integration to run and click **Update**.
+9. Once tested, you may promote the integration to production. Make sure to set the relevant environment variables in the production environment as well.

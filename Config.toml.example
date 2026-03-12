@@ -11,8 +11,17 @@ spreadsheetId = "<your-google-spreadsheet-id>"
 sheetName = "Sheet1"
 
 # Lifecycle routing sheets
+# Each HubSpot lifecycle stage routes to its own sheet by default.
+# To merge multiple stages into one sheet, set them to the same name.
+# To send all contacts to a single sheet, set all names to the same value.
+subscriberSheetName = "Subscribers"
 leadSheetName = "Leads"
+marketingqualifiedleadSheetName = "MQLs"
+salesqualifiedleadSheetName = "SQLs"
+opportunitySheetName = "Opportunities"
 customerSheetName = "Customers"
+evangelistSheetName = "Evangelists"
+otherSheetName = "Others"
 defaultSheetName = "Sheet1"
 
 # Contact columns to export
