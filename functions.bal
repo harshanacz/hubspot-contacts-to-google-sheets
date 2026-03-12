@@ -161,7 +161,13 @@ function fetchHubSpotContacts(string lastSyncTime) returns Contact[]|error {
 
     io:println(string `---- Contacts selected for export: ${allContacts.length()}`);
 
-    return allContacts;
+    // Sort by updatedAt ascending so oldest unprocessed contacts are handled first.
+    // This ensures the checkpoint advances steadily when maxRows is set.
+    Contact[] sortedContacts = from Contact c in allContacts
+        order by c.updatedAt ascending
+        select c;
+
+    return sortedContacts;
 }
 
 // Extract property safely
