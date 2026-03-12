@@ -94,6 +94,10 @@
             "maxRows": {
               "type": "integer",
               "description": ""
+            },
+            "syncMode": {
+              "type": "string",
+              "description": ""
             }
           },
           "additionalProperties": false,
@@ -109,6 +113,6 @@
       "additionalProperties": false
     }
   },
-  "additionalProperties": false,
+   "additionalProperties": false,
      "requiredLevel": 3
 }
