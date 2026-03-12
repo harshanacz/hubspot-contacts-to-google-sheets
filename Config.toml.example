@@ -8,7 +8,6 @@ googleRefreshToken = "<your-google-refresh-token>"
 
 # Google Spreadsheet target
 spreadsheetId = "<your-google-spreadsheet-id>"
-sheetName = "Sheet1"
 
 # Lifecycle routing sheets
 # Each HubSpot lifecycle stage routes to its own sheet by default.

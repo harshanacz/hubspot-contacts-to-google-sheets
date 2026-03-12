@@ -10,29 +10,25 @@
           "properties": {
             "hubspotAccessToken": {
               "type": "string",
-              "description": "HubSpot private app access token used to fetch contacts."
+              "description": ""
             },
             "googleClientId": {
               "type": "string",
-              "description": "Google OAuth2 client ID used for Google Sheets access."
+              "description": ""
             },
             "googleClientSecret": {
               "type": "string",
-              "description": "Google OAuth2 client secret."
+              "description": ""
             },
             "googleRefreshToken": {
               "type": "string",
-              "description": "Refresh token used to obtain access tokens for Google Sheets API."
+              "description": ""
             },
             "googleRefreshUrl": {
               "type": "string",
               "description": ""
             },
             "spreadsheetId": {
-              "type": "string",
-              "description": "ID of the target Google Spreadsheet where contacts will be stored."
-            },
-            "sheetName": {
               "type": "string",
               "description": ""
             },
@@ -81,7 +77,7 @@
             },
             "scheduleIntervalSeconds": {
               "type": "integer",
-              "description": "Interval in seconds for periodic synchronization."
+              "description": ""
             },
             "lastSyncTimestamp": {
               "type": "string",
@@ -89,11 +85,11 @@
             },
             "contactFilterProperty": {
               "type": "string",
-              "description": "HubSpot contact property used for filtering contacts."
+              "description": ""
             },
             "contactFilterValue": {
               "type": "string",
-              "description": "Value that must match the filter property for a contact to be synced."
+              "description": ""
             },
             "maxRows": {
               "type": "integer",
@@ -106,8 +102,7 @@
             "googleClientId",
             "googleClientSecret",
             "googleRefreshToken",
-            "spreadsheetId",
-            "sheetName"
+            "spreadsheetId"
           ]
         }
       },
@@ -115,5 +110,5 @@
     }
   },
   "additionalProperties": false,
-    "requiredLevel": 3
+     "requiredLevel": 3
 }

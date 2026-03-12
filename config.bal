@@ -9,7 +9,6 @@ configurable string googleRefreshUrl = "https://oauth2.googleapis.com/token";
 
 // Google Sheet Details
 configurable string spreadsheetId = ?;
-configurable string sheetName = ?;
 
 // Lifecycle-based Sheet Routing Configuration
 // Each lifecycle stage maps to a sheet name.

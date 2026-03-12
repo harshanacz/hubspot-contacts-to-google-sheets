@@ -311,7 +311,7 @@ function getTargetSheetName(Contact contact) returns string {
         "other" => { return otherSheetName; }
     }
 
-    return defaultSheetName.trim() != "" ? defaultSheetName : sheetName;
+    return defaultSheetName;
 }
 
 // Column index → letter
