@@ -36,11 +36,35 @@
               "type": "string",
               "description": ""
             },
+            "subscriberSheetName": {
+              "type": "string",
+              "description": ""
+            },
             "leadSheetName": {
               "type": "string",
               "description": ""
             },
+            "marketingqualifiedleadSheetName": {
+              "type": "string",
+              "description": ""
+            },
+            "salesqualifiedleadSheetName": {
+              "type": "string",
+              "description": ""
+            },
+            "opportunitySheetName": {
+              "type": "string",
+              "description": ""
+            },
             "customerSheetName": {
+              "type": "string",
+              "description": ""
+            },
+            "evangelistSheetName": {
+              "type": "string",
+              "description": ""
+            },
+            "otherSheetName": {
               "type": "string",
               "description": ""
             },
@@ -90,6 +114,5 @@
       "additionalProperties": false
     }
   },
-  "additionalProperties": false,
-  "requiredLevel": 3
+  "additionalProperties": false
 }
