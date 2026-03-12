@@ -19,11 +19,11 @@
 
 2. Navigate to **Settings → Integrations → Legacy Apps**.
 
-   ![HubSpot Legacy Apps](../docs/images/hubspot_1.png)
+   ![HubSpot Legacy Apps (Private App)](../docs/images/hubspot_1.png)
 
 3. Create a **new private app**.
 
-   ![Create Private App](../docs/images/hubspot_2.png)
+   ![Create Legacy App (Private App)](../docs/images/hubspot_2.png)
 
 4. Enable the following scope:
    - `crm.objects.contacts.read`
