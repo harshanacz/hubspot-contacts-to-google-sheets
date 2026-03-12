@@ -140,7 +140,13 @@
    - How often the sync runs, in seconds.
    - Default: `15`
 
-3. `maxRows`
+3. `syncMode`
+   - Controls how contacts are written to the sheet:
+     - `upsert` *(default)* — update the row if the email already exists, insert a new row if not
+     - `append` — always insert a new row, never check for duplicates
+     - `replace` — clear the sheet data first, then write all contacts fresh
+
+4. `maxRows`
    - Maximum number of contacts to process per run. Set to `0` for unlimited.
    - Default: `0`
 

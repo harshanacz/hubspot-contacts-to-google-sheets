@@ -11,7 +11,7 @@ Contacts are routed to different sheets based on their lifecycle stage, and exis
 - Fetches contacts from HubSpot using the HubSpot CRM Contacts API
 - Synchronizes contacts to Google Sheets
 - Routes contacts to sheets based on lifecycle stage (Leads, Customers, or a default sheet)
-- Uses email as a unique key to **UPSERT** rows
+- Uses email as a unique key to **UPSERT** rows (configurable: append, replace, or upsert)
 - Supports incremental synchronization using a last sync timestamp
 - Supports configurable contact filtering by any HubSpot property
 - Allows configurable field mapping between HubSpot and spreadsheet columns
@@ -81,6 +81,10 @@ Each HubSpot lifecycle stage routes to its own sheet by default:
 
 ### Sync Settings
 
+- `syncMode` - How contacts are written to the sheet:
+  - `upsert` *(default)* — update the row if the email already exists, insert if not
+  - `append` — always insert a new row, never check for duplicates
+  - `replace` — clear the sheet first, then write all contacts fresh
 - `fields` - List of HubSpot contact properties to export (e.g., `["email", "firstname", "lastname", "phone"]`)
 - `scheduleIntervalSeconds` - How frequently the sync runs, in seconds
 - `maxRows` - Maximum number of contacts to process per run (`0` for unlimited)

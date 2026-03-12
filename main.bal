@@ -22,10 +22,13 @@ public function main() returns error? {
             
             // Get the last sync timestamp
             string lastSyncTime = getLastSyncTimestamp();
-            boolean isFullSync = lastSyncTime == "";
+            
+            // replace mode always does a full fetch so the sheet is fully rebuilt each run
+            boolean isFullSync = lastSyncTime == "" || syncMode.trim().toLowerAscii() == "replace";
+            string effectiveSyncTime = isFullSync ? "" : lastSyncTime;
             
             // Step 1: Fetch contacts from HubSpot (with incremental sync)
-            Contact[] contacts = check fetchHubSpotContacts(lastSyncTime);
+            Contact[] contacts = check fetchHubSpotContacts(effectiveSyncTime);
             string latestTimestamp = lastSyncTime;
             
             if contacts.length() == 0 {
@@ -37,7 +40,7 @@ public function main() returns error? {
             } else {
                 // Step 2: Export contacts to Google Sheet and get latest timestamp
                 io:println("---- Exporting contacts to Google Sheets");
-                latestTimestamp = check exportContactsToSheet(contacts, lastSyncTime, isFullSync);
+                latestTimestamp = check exportContactsToSheet(contacts, effectiveSyncTime, isFullSync);
             }
 
             // Step 3: Save the latest timestamp for next run after processing finishes.
