@@ -8,8 +8,10 @@ D{Contact Filter Enabled?}:::decisionNode
 E[Filter Contacts]:::processNode
 F[Determine Lifecycle Stage]:::processNode
 G[Select Target Google Sheet]:::processNode
+SM{Sync Mode?}:::decisionNode
+REP[Clear Sheet Data]:::processNode
 H[Check Existing Row by Email]:::processNode
-I[UPSERT Contact Row]:::processNode
+I[Write Contact Row]:::processNode
 J[Update Last Sync Timestamp]:::processNode
 K([End]):::endNode
 
@@ -20,7 +22,11 @@ D -->|Yes| E
 D -->|No| F
 E --> F
 F --> G
-G --> H
+G --> SM
+SM -->|replace| REP
+REP --> I
+SM -->|append| I
+SM -->|upsert| H
 H --> I
 I --> J
 J --> K

@@ -338,23 +338,53 @@ function getColumnLetter(int columnNumber) returns string {
     return columnLetter;
 }
 
-// Export contacts with UPSERT and return latest processed timestamp
+// Clear all data rows in a sheet (keeps header row)
+function clearSheetData(string targetSheet) returns error? {
+    sheets:Range|error result = sheetsClient->getRange(spreadsheetId, targetSheet, "A:Z");
+    if result is error {
+        return;
+    }
+    int totalRows = result.values.length();
+    if totalRows <= 1 {
+        return;
+    }
+    // Clear from row 2 downward
+    string clearRange = string `A2:Z${totalRows}`;
+    check sheetsClient->clearRange(spreadsheetId, targetSheet, clearRange);
+    io:println(string `---- Cleared ${totalRows - 1} data rows from '${targetSheet}'`);
+}
+
+// Export contacts to Google Sheet using the configured sync mode
 function exportContactsToSheet(Contact[] contacts, string lastSyncTimestamp, boolean isFullSync) returns string|error {
 
-    io:println("---- Preparing sheet export");
+    string mode = syncMode.trim().toLowerAscii();
+    io:println(string `---- Preparing sheet export (mode: ${mode})`);
+
+    // For replace mode: clear all target sheets before writing
+    if mode == "replace" {
+        map<boolean> clearedSheets = {};
+        foreach Contact contact in contacts {
+            string targetSheet = getTargetSheetName(contact);
+            if !clearedSheets.hasKey(targetSheet) {
+                check ensureHeaderRow(targetSheet);
+                check clearSheetData(targetSheet);
+                clearedSheets[targetSheet] = true;
+            }
+        }
+    }
+
     map<map<int>> emailRowMapBySheet = {};
 
     int insertCount = 0;
     int updateCount = 0;
     int errorCount = 0;
-    
+
     string latestTimestamp = lastSyncTimestamp;
     int processedCount = 0;
-    
     boolean limitReached = false;
 
     foreach Contact contact in contacts {
-        
+
         // Apply max row limit only during incremental sync runs.
         if !isFullSync && maxRows > 0 {
             if processedCount >= maxRows {
@@ -367,18 +397,8 @@ function exportContactsToSheet(Contact[] contacts, string lastSyncTimestamp, boo
         ContactProperties props = contact.properties;
         string targetSheet = getTargetSheetName(contact);
 
-        map<int>? existingSheetMap = emailRowMapBySheet[targetSheet];
-        map<int> emailRowMap;
-        if existingSheetMap is map<int> {
-            emailRowMap = existingSheetMap;
-        } else {
-            check ensureHeaderRow(targetSheet);
-            emailRowMap = check buildEmailRowMap(targetSheet);
-            emailRowMapBySheet[targetSheet] = emailRowMap;
-        }
-
         string email =
-            getContactPropertyValue(props,"email")
+            getContactPropertyValue(props, "email")
             .trim()
             .toLowerAscii();
 
@@ -389,59 +409,64 @@ function exportContactsToSheet(Contact[] contacts, string lastSyncTimestamp, boo
         }
 
         (string|int|decimal)[] rowData = [];
-
         foreach string fieldName in fields {
-
-            string value =
-                getContactPropertyValue(props,fieldName);
-
-            rowData.push(value);
+            rowData.push(getContactPropertyValue(props, fieldName));
         }
+        rowData.push(getCurrentTimestamp());
 
-        // Add per-row sync write timestamp as the final column.
-        string lastSyncedAt = getCurrentTimestamp();
-        rowData.push(lastSyncedAt);
+        boolean writeSucceeded = false;
 
-        int? existingRow = emailRowMap[email];
-        boolean upsertSucceeded = false;
-
-        if existingRow is int {
-
-            error? result =
-                updateSheetRow(targetSheet, existingRow, rowData);
-
-            if result is error {
-                io:println(string `---- Update failed for contact ${contact.id} in '${targetSheet}'`);
-                errorCount += 1;
-            } else {
-                updateCount += 1;
-                upsertSucceeded = true;
-            }
-
-        } else {
-
-            error? result =
-                sheetsClient->appendRowToSheet(
-                    spreadsheetId,
-                    targetSheet,
-                    rowData
-                );
-
+        if mode == "append" || mode == "replace" {
+            // append and replace both just insert a new row
+            check ensureHeaderRow(targetSheet);
+            error? result = sheetsClient->appendRowToSheet(spreadsheetId, targetSheet, rowData);
             if result is error {
                 io:println(string `---- Insert failed for contact ${contact.id} in '${targetSheet}'`);
                 errorCount += 1;
             } else {
                 insertCount += 1;
-                upsertSucceeded = true;
+                writeSucceeded = true;
+            }
+        } else {
+            // Default: upsert — update if email exists, insert if not
+            map<int>? existingSheetMap = emailRowMapBySheet[targetSheet];
+            map<int> emailRowMap;
+            if existingSheetMap is map<int> {
+                emailRowMap = existingSheetMap;
+            } else {
+                check ensureHeaderRow(targetSheet);
+                emailRowMap = check buildEmailRowMap(targetSheet);
+                emailRowMapBySheet[targetSheet] = emailRowMap;
+            }
+
+            int? existingRow = emailRowMap[email];
+            if existingRow is int {
+                error? result = updateSheetRow(targetSheet, existingRow, rowData);
+                if result is error {
+                    io:println(string `---- Update failed for contact ${contact.id} in '${targetSheet}'`);
+                    errorCount += 1;
+                } else {
+                    updateCount += 1;
+                    writeSucceeded = true;
+                }
+            } else {
+                error? result = sheetsClient->appendRowToSheet(spreadsheetId, targetSheet, rowData);
+                if result is error {
+                    io:println(string `---- Insert failed for contact ${contact.id} in '${targetSheet}'`);
+                    errorCount += 1;
+                } else {
+                    insertCount += 1;
+                    writeSucceeded = true;
+                    emailRowMap[email] = emailRowMap.length() + 2;
+                }
             }
         }
-        
-        if upsertSucceeded {
+
+        if writeSucceeded {
             processedCount += 1;
         }
 
-        // Track the newest processed updatedAt timestamp.
-        if upsertSucceeded && (latestTimestamp == "" || isNewerThan(contact.updatedAt, latestTimestamp)) {
+        if writeSucceeded && (latestTimestamp == "" || isNewerThan(contact.updatedAt, latestTimestamp)) {
             latestTimestamp = contact.updatedAt;
         }
     }
@@ -450,6 +475,6 @@ function exportContactsToSheet(Contact[] contacts, string lastSyncTimestamp, boo
     io:println(
         string `---- Export summary: inserted ${insertCount}, updated ${updateCount}, failed ${errorCount}${limitInfo}`
     );
-    
+
     return latestTimestamp;
 }

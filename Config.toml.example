@@ -30,6 +30,12 @@ fields = ["email", "firstname", "lastname", "phone"]
 scheduleIntervalSeconds = 15
 maxRows = 0
 
+# Sync mode
+# "upsert"  - Update existing row if email matches, insert if not (default)
+# "append"  - Always insert a new row, never check for duplicates
+# "replace" - Clear the sheet first, then write all contacts fresh
+syncMode = "upsert"
+
 # Initial sync state (usually keep empty)
 lastSyncTimestamp = ""
 

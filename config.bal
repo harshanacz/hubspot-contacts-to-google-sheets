@@ -38,3 +38,9 @@ configurable string contactFilterValue = "";
 
 // Row Limit Configuration
 configurable int maxRows = 2;
+
+// Sync Mode Configuration
+// "upsert"  - Update existing row if email matches, insert if not (default)
+// "append"  - Always insert a new row, never check for duplicates
+// "replace" - Clear the sheet first, then write all contacts fresh
+configurable string syncMode = "upsert";
