@@ -10,19 +10,19 @@
           "properties": {
             "hubspotAccessToken": {
               "type": "string",
-              "description": ""
+              "description": "HubSpot private app access token used to fetch contacts."
             },
             "googleClientId": {
               "type": "string",
-              "description": ""
+              "description": "Google OAuth2 client ID used for Google Sheets access."
             },
             "googleClientSecret": {
               "type": "string",
-              "description": ""
+              "description": "Google OAuth2 client secret."
             },
             "googleRefreshToken": {
               "type": "string",
-              "description": ""
+              "description": "Refresh token used to obtain access tokens for Google Sheets API."
             },
             "googleRefreshUrl": {
               "type": "string",
@@ -30,7 +30,7 @@
             },
             "spreadsheetId": {
               "type": "string",
-              "description": ""
+              "description": "ID of the target Google Spreadsheet where contacts will be stored."
             },
             "sheetName": {
               "type": "string",
@@ -81,7 +81,7 @@
             },
             "scheduleIntervalSeconds": {
               "type": "integer",
-              "description": ""
+              "description": "Interval in seconds for periodic synchronization."
             },
             "lastSyncTimestamp": {
               "type": "string",
@@ -89,11 +89,11 @@
             },
             "contactFilterProperty": {
               "type": "string",
-              "description": ""
+              "description": "HubSpot contact property used for filtering contacts."
             },
             "contactFilterValue": {
               "type": "string",
-              "description": ""
+              "description": "Value that must match the filter property for a contact to be synced."
             },
             "maxRows": {
               "type": "integer",

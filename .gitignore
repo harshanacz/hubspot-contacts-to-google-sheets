@@ -20,3 +20,4 @@ last_sync_timestamp.txt
 
 target/
 Dependencies.toml
+.DS_Store
