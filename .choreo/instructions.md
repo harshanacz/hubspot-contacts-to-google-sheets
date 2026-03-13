@@ -150,10 +150,10 @@
    - Maximum number of contacts to process per run. Set to `0` for unlimited.
    - Default: `0`
 
-4. `lastSyncTimestamp`
+5. `lastSyncTimestamp`
    - Timestamp of the last sync. Leave empty to trigger a full initial sync.
 
-5. `contactFilterProperty` and `contactFilterValue`
+6. `contactFilterProperty` and `contactFilterValue`
    - Optional filter to only export contacts matching a specific HubSpot property.
    - Example: set `contactFilterProperty = "lifecyclestage"` and `contactFilterValue = "customer"` to export only customers.
 
