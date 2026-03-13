@@ -1,22 +1,37 @@
 import ballerina/io;
 import ballerina/file;
 import ballerina/time;
+import ballerinax/googleapis.sheets;
 
 // File to store the last sync timestamp
 const string SYNC_STATE_FILE = "last_sync_timestamp.txt";
+const string SYNC_STATE_SHEET = "_sync_state";
+const string SYNC_STATE_CELL = "A1";
 
 // Global variable to track current sync timestamp
 string currentSyncTimestamp = lastSyncTimestamp;
 
 // Get the last sync timestamp
 function getLastSyncTimestamp() returns string {
-    // First check if there's a persisted timestamp in file
+    // First check if there's a persisted timestamp in spreadsheet state sheet
+    string|error sheetCheckpoint = readCheckpointFromSheet();
+    if sheetCheckpoint is string {
+        string timestamp = sheetCheckpoint.trim();
+        if timestamp != "" {
+            currentSyncTimestamp = timestamp;
+            io:println(string `---- Loaded checkpoint from sheet '${SYNC_STATE_SHEET}': ${timestamp}`);
+            return timestamp;
+        }
+    }
+
+    // Fallback: check if there's a persisted timestamp in file
     boolean|file:Error fileExistsResult = file:test(SYNC_STATE_FILE, file:EXISTS);
     if fileExistsResult is boolean && fileExistsResult {
         string|error fileContent = io:fileReadString(SYNC_STATE_FILE);
         if fileContent is string {
             string timestamp = fileContent.trim();
             if timestamp != "" {
+                currentSyncTimestamp = timestamp;
                 io:println(string `---- Loaded checkpoint from file: ${timestamp}`);
                 return timestamp;
             }
@@ -25,7 +40,7 @@ function getLastSyncTimestamp() returns string {
     
     // Fall back to configurable value
     if currentSyncTimestamp != "" {
-        io:println(string `---- Using configured checkpoint: ${currentSyncTimestamp}`);
+        io:println(string `---- Using runtime/configured checkpoint: ${currentSyncTimestamp}`);
         return currentSyncTimestamp;
     }
     
@@ -51,14 +66,49 @@ function saveLastSyncTimestamp(string timestamp) returns error? {
 
     currentSyncTimestamp = checkpointToSave;
 
+    error? sheetWriteResult = writeCheckpointToSheet(checkpointToSave);
+    if sheetWriteResult is () {
+        io:println(string `---- Saved checkpoint in sheet '${SYNC_STATE_SHEET}': ${checkpointToSave}`);
+        return;
+    }
+
     error? writeResult = io:fileWriteString(SYNC_STATE_FILE, checkpointToSave);
     if writeResult is error {
+        io:println(string `---- Warning: could not persist checkpoint to sheet '${SYNC_STATE_SHEET}': ${sheetWriteResult.message()}.`);
         io:println(string `---- Warning: could not persist checkpoint to '${SYNC_STATE_FILE}': ${writeResult.message()}. Using in-memory checkpoint for this process.`);
         io:println(string `---- Saved checkpoint in memory: ${checkpointToSave}`);
         return;
     }
 
+    io:println(string `---- Warning: could not persist checkpoint to sheet '${SYNC_STATE_SHEET}': ${sheetWriteResult.message()}. Falling back to file.`);
+
     io:println(string `---- Saved checkpoint: ${checkpointToSave}`);
+}
+
+function readCheckpointFromSheet() returns string|error {
+    sheets:Cell checkpointCell = check sheetsClient->getCell(spreadsheetId, SYNC_STATE_SHEET, SYNC_STATE_CELL);
+    return checkpointCell.value.toString();
+}
+
+function ensureSyncStateSheetExists() returns error? {
+    sheets:Sheet|error existingSheet = sheetsClient->getSheetByName(spreadsheetId, SYNC_STATE_SHEET);
+    if existingSheet is sheets:Sheet {
+        return;
+    }
+
+    sheets:Sheet|error addedSheet = sheetsClient->addSheet(spreadsheetId, SYNC_STATE_SHEET);
+    if addedSheet is error {
+        sheets:Sheet|error sheetAfterRetry = sheetsClient->getSheetByName(spreadsheetId, SYNC_STATE_SHEET);
+        if sheetAfterRetry is sheets:Sheet {
+            return;
+        }
+        return addedSheet;
+    }
+}
+
+function writeCheckpointToSheet(string checkpointToSave) returns error? {
+    check ensureSyncStateSheetExists();
+    check sheetsClient->setCell(spreadsheetId, SYNC_STATE_SHEET, SYNC_STATE_CELL, checkpointToSave);
 }
 
 // Get current timestamp in ISO 8601 format

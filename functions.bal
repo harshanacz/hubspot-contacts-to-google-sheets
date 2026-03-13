@@ -1,6 +1,10 @@
 import ballerina/io;
+import ballerina/lang.runtime;
 import ballerinax/hubspot.crm.obj.contacts as hubspotcontacts;
 import ballerinax/googleapis.sheets;
+
+const int MAX_WRITE_RETRY_ATTEMPTS = 3;
+const decimal INITIAL_WRITE_BACKOFF_SECONDS = 2d;
 
 // Validate external API access with current configuration.
 function validateExternalConnections() returns error? {
@@ -295,6 +299,55 @@ function updateSheetRow(string targetSheet, int rowNumber, (string|int|decimal)[
     check sheetsClient->setRange(spreadsheetId, targetSheet, updateRange);
 }
 
+function isSheetsRateLimitError(error err) returns boolean {
+    string errorText = err.toString();
+    return errorText.includes("\"code\":429")
+        || errorText.includes("RATE_LIMIT_EXCEEDED")
+        || errorText.includes("RESOURCE_EXHAUSTED");
+}
+
+function appendSheetRowWithRetry(string targetSheet, (string|int|decimal)[] rowData, string contactId) returns error? {
+    int attempt = 0;
+    decimal backoff = INITIAL_WRITE_BACKOFF_SECONDS;
+
+    while true {
+        error? appendResult = sheetsClient->appendRowToSheet(spreadsheetId, targetSheet, rowData);
+        if appendResult is () {
+            return;
+        }
+
+        if !isSheetsRateLimitError(appendResult) || attempt >= MAX_WRITE_RETRY_ATTEMPTS {
+            return appendResult;
+        }
+
+        attempt += 1;
+        io:println(string `---- Rate limit hit while inserting contact ${contactId} in '${targetSheet}'. Retrying in ${backoff}s (attempt ${attempt}/${MAX_WRITE_RETRY_ATTEMPTS})`);
+        runtime:sleep(backoff);
+        backoff *= 2d;
+    }
+}
+
+function updateSheetRowWithRetry(string targetSheet, int rowNumber, (string|int|decimal)[] rowData, string contactId) returns error? {
+    int attempt = 0;
+    decimal backoff = INITIAL_WRITE_BACKOFF_SECONDS;
+
+    while true {
+        error? updateResult = updateSheetRow(targetSheet, rowNumber, rowData);
+        if updateResult is () {
+            return;
+        }
+
+        if !isSheetsRateLimitError(updateResult) || attempt >= MAX_WRITE_RETRY_ATTEMPTS {
+            return updateResult;
+        }
+
+        attempt += 1;
+        io:println(string `---- Rate limit hit while updating contact ${contactId} in '${targetSheet}'. Retrying in ${backoff}s (attempt ${attempt}/${MAX_WRITE_RETRY_ATTEMPTS})`);
+        runtime:sleep(backoff);
+        backoff *= 2d;
+    }
+}
+
 function getTargetSheetName(Contact contact) returns string {
     string lifecycleStage = getContactPropertyValue(contact.properties, "lifecyclestage").trim().toLowerAscii();
 
@@ -423,7 +476,7 @@ function exportContactsToSheet(Contact[] contacts, string lastSyncTimestamp, boo
         if mode == "append" || mode == "replace" {
             // append and replace both just insert a new row
             check ensureHeaderRow(targetSheet);
-            error? result = sheetsClient->appendRowToSheet(spreadsheetId, targetSheet, rowData);
+            error? result = appendSheetRowWithRetry(targetSheet, rowData, contact.id);
             if result is error {
                 io:println(string `---- Insert failed for contact ${contact.id} in '${targetSheet}': ${result.message()}`);
                 errorCount += 1;
@@ -445,7 +498,7 @@ function exportContactsToSheet(Contact[] contacts, string lastSyncTimestamp, boo
 
             int? existingRow = emailRowMap[email];
             if existingRow is int {
-                error? result = updateSheetRow(targetSheet, existingRow, rowData);
+                error? result = updateSheetRowWithRetry(targetSheet, existingRow, rowData, contact.id);
                 if result is error {
                     io:println(string `---- Update failed for contact ${contact.id} in '${targetSheet}': ${result.message()}`);
                     errorCount += 1;
@@ -454,7 +507,7 @@ function exportContactsToSheet(Contact[] contacts, string lastSyncTimestamp, boo
                     writeSucceeded = true;
                 }
             } else {
-                error? result = sheetsClient->appendRowToSheet(spreadsheetId, targetSheet, rowData);
+                error? result = appendSheetRowWithRetry(targetSheet, rowData, contact.id);
                 if result is error {
                     io:println(string `---- Insert failed for contact ${contact.id} in '${targetSheet}': ${result.message()}`);
                     errorCount += 1;
