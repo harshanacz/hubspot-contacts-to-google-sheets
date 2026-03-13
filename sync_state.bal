@@ -48,8 +48,16 @@ function saveLastSyncTimestamp(string timestamp) returns error? {
     } else {
         io:println(string `---- Warning: could not advance checkpoint timestamp '${timestamp}': ${parsedTime.message()}. Saving as-is.`);
     }
-    check io:fileWriteString(SYNC_STATE_FILE, checkpointToSave);
+
     currentSyncTimestamp = checkpointToSave;
+
+    error? writeResult = io:fileWriteString(SYNC_STATE_FILE, checkpointToSave);
+    if writeResult is error {
+        io:println(string `---- Warning: could not persist checkpoint to '${SYNC_STATE_FILE}': ${writeResult.message()}. Using in-memory checkpoint for this process.`);
+        io:println(string `---- Saved checkpoint in memory: ${checkpointToSave}`);
+        return;
+    }
+
     io:println(string `---- Saved checkpoint: ${checkpointToSave}`);
 }
 
