@@ -425,7 +425,7 @@ function exportContactsToSheet(Contact[] contacts, string lastSyncTimestamp, boo
             check ensureHeaderRow(targetSheet);
             error? result = sheetsClient->appendRowToSheet(spreadsheetId, targetSheet, rowData);
             if result is error {
-                io:println(string `---- Insert failed for contact ${contact.id} in '${targetSheet}'`);
+                io:println(string `---- Insert failed for contact ${contact.id} in '${targetSheet}': ${result.message()}`);
                 errorCount += 1;
             } else {
                 insertCount += 1;
@@ -447,7 +447,7 @@ function exportContactsToSheet(Contact[] contacts, string lastSyncTimestamp, boo
             if existingRow is int {
                 error? result = updateSheetRow(targetSheet, existingRow, rowData);
                 if result is error {
-                    io:println(string `---- Update failed for contact ${contact.id} in '${targetSheet}'`);
+                    io:println(string `---- Update failed for contact ${contact.id} in '${targetSheet}': ${result.message()}`);
                     errorCount += 1;
                 } else {
                     updateCount += 1;
@@ -456,7 +456,7 @@ function exportContactsToSheet(Contact[] contacts, string lastSyncTimestamp, boo
             } else {
                 error? result = sheetsClient->appendRowToSheet(spreadsheetId, targetSheet, rowData);
                 if result is error {
-                    io:println(string `---- Insert failed for contact ${contact.id} in '${targetSheet}'`);
+                    io:println(string `---- Insert failed for contact ${contact.id} in '${targetSheet}': ${result.message()}`);
                     errorCount += 1;
                 } else {
                     insertCount += 1;
