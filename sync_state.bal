@@ -138,7 +138,7 @@ function isNewerThan(string timestamp1, string timestamp2) returns boolean {
 
     if time1 is time:Utc && time2 is time:Utc {
         decimal diff = time:utcDiffSeconds(time1, time2);
-        return diff > 0d;
+        return diff >= 0d;
     }
 
     // Log the parse failure so it doesn't go unnoticed, then include the

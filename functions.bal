@@ -524,7 +524,9 @@ function exportContactsToSheet(Contact[] contacts, string lastSyncTimestamp, boo
                     writeSucceeded = true;
                     // Assign the actual row number for this new entry, then
                     // advance the counter for the next insert into this sheet.
-                    int nextRow = nextRowBySheet[targetSheet] ?: (emailRowMap.length() + 2);
+                    // nextRowBySheet is always seeded by buildEmailRowMap above,
+                    // so this lookup will never be absent for a given sheet.
+                    int nextRow = nextRowBySheet[targetSheet] ?: (totalRowCount + 1);
                     emailRowMap[email] = nextRow;
                     nextRowBySheet[targetSheet] = nextRow + 1;
                 }
